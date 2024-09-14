@@ -21,9 +21,8 @@ const App = () => {
   const [cards, setCards] = useState(
     CardsData.map((card) => ({ ...card, isFlipped: false, rotateClass: '' }))
   );
-  const [selectedCards, setSelectedCards] = useState([]);
-  const [isModalOpen, setIsModalOpen] = useState(false);
-  const [modalTimeout, setModalTimeout] = useState(null); // State to hold timeout reference
+  const [selectedCards, setSelectedCards] = useState([]); // Keep track of multiple selected cards
+  const maxSelectedCards = 3; 
 
   useEffect(() => {
     // Apply rotation to a random subset of cards on mount
@@ -31,7 +30,7 @@ const App = () => {
   }, []);
 
   const applyRandomRotation = () => {
-    const rotateCardCount = 20; // Number of cards to rotate
+    const rotateCardCount = 11; // Number of cards to rotate
     const indices = getRandomIndices(cards.length, rotateCardCount);
 
     setCards((prevCards) =>
@@ -41,7 +40,6 @@ const App = () => {
       }))
     );
   };
-
   const handleCardClick = (index) => {
     setCards((prevCards) => {
       const updatedCards = prevCards.map((card, i) =>
@@ -49,24 +47,26 @@ const App = () => {
       );
 
       // Update selected cards logic
-      const flippedCards = updatedCards.filter((card) => card.isFlipped);
-      if (flippedCards.length === 3) {
-        setSelectedCards(flippedCards);
-        if (modalTimeout) {
-          clearTimeout(modalTimeout); // Clear existing timeout before setting a new one
+      const flippedCard = updatedCards[index];
+
+      setSelectedCards((prevSelectedCards) => {
+        // If card is flipped and max limit reached, prevent selecting more
+        if (flippedCard.isFlipped && prevSelectedCards.length >= maxSelectedCards) {
+          // Revert the flip since max is reached
+          updatedCards[index].isFlipped = false;
+          return prevSelectedCards;
         }
-        const timeout = setTimeout(() => {
-          setIsModalOpen(true); // Open modal after 2 seconds
-        }, 2000); // 2 seconds delay
-        setModalTimeout(timeout); // Save the timeout reference
-      }
+
+        // If card is flipped, add it to selectedCards, otherwise remove it
+        if (flippedCard.isFlipped) {
+          return [...prevSelectedCards, flippedCard];
+        } else {
+          return prevSelectedCards.filter((card) => card !== flippedCard);
+        }
+      });
 
       return updatedCards;
     });
-  };
-
-  const handleModalClose = () => {
-    setIsModalOpen(false); // Only close the modal without shuffling cards
   };
 
   const handleShuffle = () => {
@@ -92,101 +92,97 @@ const App = () => {
   };
 
   return (
-    <div className="flex flex-col justify-center items-center min-h-screen bg-gray-100">
-      <h1 className='text-3xl font-bold'>Select The Cards</h1>
+    <div className="px-4 flex flex-row min-h-screen items-center justify-between gap-20 bg-gray-100">
+      {/* Left side: Cards */}
+      <div className="w-[35rem] h-full flex flex-col items-center justify-center">
+        <h1 className="text-3xl font-bold mb-4">Select The Cards</h1>
 
-      {/* Shuffle and Reset buttons */}
-      <div className="flex space-x-4 my-4">
-        <button
-          onClick={handleShuffle}
-          className="px-4 py-2 bg-blue-500 text-white rounded"
-        >
-          Shuffle & Reset Cards
-        </button>
-        <button
-          onClick={handleReset}
-          className="px-4 py-2 bg-gray-500 text-white rounded"
-        >
-          Reset All Cards
-        </button>
-      </div>
-
-      <div className="grid grid-cols-20 gap-4 overflow-y-auto">
-        {cards.map((card, index) => (
-          <div
-            key={index}
-            className={`relative w-16 h-28 cursor-pointer perspective-1000 ${card.rotateClass}`} // Apply rotation class
-            onClick={() => handleCardClick(index)}
+        {/* Shuffle and Reset buttons */}
+        <div className="flex space-x-4 my-4">
+          <button
+            onClick={handleShuffle}
+            className="px-4 py-2 bg-blue-500 text-white rounded"
           >
+            Shuffle & Reset Cards
+          </button>
+          <button
+            onClick={handleReset}
+            className="px-4 py-2 bg-gray-500 text-white rounded"
+          >
+            Reset All Cards
+          </button>
+        </div>
+
+        <div className=" grid grid-cols-10 gap-2 overflow-y-hidden">
+          {cards.map((card, index) => (
             <div
-              className={`absolute w-16 h-28 transition-transform duration-500 transform-style-preserve-3d
-                ${card.isFlipped ? 'rotate-y-180' : ''}`}
-              style={{ transformOrigin: '50% 50%' }}
+              key={index}
+              className={`relative w-[2rem] h-[3rem] cursor-pointer perspective-1000 ${card.rotateClass}`} // Apply rotation class
+              onClick={() => handleCardClick(index)}
             >
               <div
-                className={`absolute w-full h-full backface-hidden ${card.isFlipped ? 'hidden' : ''}`}
+                className={`absolute w-[2rem] h-[3rem] transition-transform duration-500 transform-style-preserve-3d
+                ${card.isFlipped ? 'rotate-y-180' : ''}`}
+                style={{ transformOrigin: '50% 50%' }}
               >
-                <div className="flex items-center justify-center h-full text-white">
-                  <img className='object-cover' src="/images/card.jpg" alt="" />
+                <div
+                  className={`absolute w-full h-full backface-hidden ${card.isFlipped ? 'hidden' : ''}`}
+                >
+                  <div className="flex items-center justify-center h-full text-white">
+                    <img className="object-cover" src="/images/card.jpg" alt="" />
+                  </div>
+                </div>
+                <div
+                  className={`absolute w-full h-full backface-hidden ${card.isFlipped ? '' : 'hidden'} rotate-y-180`}
+                >
+                  <img
+                    src={card.img}
+                    className="w-[2rem] h-[3rem] object-cover"
+                  />
                 </div>
               </div>
-              <div
-                className={`absolute w-full h-full backface-hidden ${card.isFlipped ? '' : 'hidden'} rotate-y-180`}
-              >
-                <img
-                  src={card.img}
-                  className="w-16 h-28 object-cover"
-                />
-              </div>
             </div>
-          </div>
-        ))}
+          ))}
+        </div>
       </div>
 
-      {/* Modal */}
-      {isModalOpen && (
-        <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50">
-          <div className="mx-20 my-10 bg-white p-4 flex flex-col items-center rounded shadow-lg w-full">
-            <h2 className="text-xl font-bold mb-4">Selected Cards</h2>
-            <div className="grid grid-cols-3 gap-4">
-              {selectedCards.map((card, index) => (
-                <div key={index} className="flex flex-col items-center">
-                  <div className={`relative w-[17rem] h-[28rem] perspective-1000 ${card.rotateClass}`}>
+      {/* Right side: Display flipped cards */}
+      <div className="w-[70rem] flex items-center justify-center">
+        {selectedCards.length > 0 ? (
+          <div className="flex items-center space-y-4">
+            {selectedCards.map((card, index) => (
+              <div key={index} className="flex flex-col items-center">
+                <div className={`relative w-[17rem] h-[28rem] perspective-1000 ${card.rotateClass}`}>
+                  <div
+                    className={`absolute w-[17rem] h-[28rem] transition-transform duration-500 transform-style-preserve-3d
+                      ${card.isFlipped ? 'rotate-y-180' : ''}`}
+                    style={{ transformOrigin: '50% 50%' }}
+                  >
                     <div
-                      className={`absolute w-[17rem] h-[28rem] transition-transform duration-500 transform-style-preserve-3d
-                        ${card.isFlipped ? 'rotate-y-180' : ''}`}
-                      style={{ transformOrigin: '50% 50%' }}
+                      className={`absolute w-full h-full backface-hidden ${card.isFlipped ? 'hidden' : ''}`}
                     >
-                      <div
-                        className={`absolute w-full h-full backface-hidden ${card.isFlipped ? 'hidden' : ''}`}
-                      >
-                        <div className="flex items-center justify-center h-full text-white">
-                          <img className='object-cover' src="/images/card.jpg" alt="" />
-                        </div>
-                      </div>
-                      <div
-                        className={`absolute w-full h-full backface-hidden ${card.isFlipped ? '' : 'hidden'} rotate-y-180`}
-                      >
-                        <img
-                          src={card.img}
-                          className="w-[17rem] h-[28rem] object-cover"
-                        />
+                      <div className="flex items-center justify-center h-full text-white">
+                        <img className="object-cover" src="/images/card.jpg" alt="" />
                       </div>
                     </div>
+                    <div
+                      className={`absolute w-full h-full backface-hidden ${card.isFlipped ? '' : 'hidden'} rotate-y-180`}
+                    >
+                      <img
+                        src={card.img}
+                        className="w-[17rem] h-[28rem] object-cover"
+                      />
+                    </div>
                   </div>
-                  <p className="mt-2 font-bold">{card.name}</p>
                 </div>
-              ))}
-            </div>
-            <button
-              onClick={handleModalClose}
-              className="mt-4 px-4 py-2 bg-red-500 text-white rounded"
-            >
-              Close Modal
-            </button>
+                <p className="mt-2 font-bold">{card.name}</p>
+              </div>
+            ))}
           </div>
-        </div>
-      )}
+        ) : (
+          <p className=" text-gray-500">Flip a card to display it here.</p>
+        )}
+      </div>
     </div>
   );
 };
