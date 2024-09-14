@@ -1,24 +1,45 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import './index.css'; // Import Tailwind styles
 import CardsData from './Cards';
 
 // Shuffle function
 const shuffleArray = (array) => array.sort(() => Math.random() - 0.5);
 
+// Helper function to get random indices
+const getRandomIndices = (total, count) => {
+  const indices = [];
+  while (indices.length < count) {
+    const randomIndex = Math.floor(Math.random() * total);
+    if (!indices.includes(randomIndex)) {
+      indices.push(randomIndex);
+    }
+  }
+  return indices;
+};
+
 const App = () => {
   const [cards, setCards] = useState(
-    CardsData.map((card) => ({ ...card, isFlipped: false }))
+    CardsData.map((card) => ({ ...card, isFlipped: false, rotateClass: '' }))
   );
   const [selectedCards, setSelectedCards] = useState([]);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [modalTimeout, setModalTimeout] = useState(null); // State to hold timeout reference
 
-  const handleShuffle = () => {
-    // Reset card flip state and shuffle card data
-    setCards((prevCards) => {
-      const shuffledCards = shuffleArray(prevCards.map((card) => ({ ...card, isFlipped: false })));
-      return shuffledCards;
-    });
-    setSelectedCards([]); // Reset selected cards
+  useEffect(() => {
+    // Apply rotation to a random subset of cards on mount
+    applyRandomRotation();
+  }, []);
+
+  const applyRandomRotation = () => {
+    const rotateCardCount = 20; // Number of cards to rotate
+    const indices = getRandomIndices(cards.length, rotateCardCount);
+
+    setCards((prevCards) =>
+      prevCards.map((card, index) => ({
+        ...card,
+        rotateClass: indices.includes(index) ? 'rotate-180' : '', // Add rotation class
+      }))
+    );
   };
 
   const handleCardClick = (index) => {
@@ -28,10 +49,16 @@ const App = () => {
       );
 
       // Update selected cards logic
-      const flippedCards = updatedCards.filter(card => card.isFlipped);
+      const flippedCards = updatedCards.filter((card) => card.isFlipped);
       if (flippedCards.length === 3) {
         setSelectedCards(flippedCards);
-        setIsModalOpen(true);
+        if (modalTimeout) {
+          clearTimeout(modalTimeout); // Clear existing timeout before setting a new one
+        }
+        const timeout = setTimeout(() => {
+          setIsModalOpen(true); // Open modal after 4 seconds
+        }, 2000); // 4 seconds delay
+        setModalTimeout(timeout); // Save the timeout reference
       }
 
       return updatedCards;
@@ -39,18 +66,56 @@ const App = () => {
   };
 
   const handleModalClose = () => {
-    setIsModalOpen(false);
-    handleShuffle(); // Shuffle and reset cards when modal is closed
+    setIsModalOpen(false); // Only close the modal without shuffling cards
+  };
+
+  const handleShuffle = () => {
+    // Reset card flip state and shuffle card data
+    setCards((prevCards) => {
+      const shuffledCards = shuffleArray(prevCards.map((card) => ({ ...card, isFlipped: false, rotateClass: '' })));
+      return shuffledCards;
+    });
+    // Apply rotation to a random subset of cards after shuffle
+    applyRandomRotation();
+    setSelectedCards([]); // Reset selected cards
+  };
+
+  const handleReset = () => {
+    // Reset the flipped state of all cards
+    setCards((prevCards) => {
+      const resetCards = prevCards.map((card) => ({ ...card, isFlipped: false, rotateClass: '' }));
+      return resetCards;
+    });
+    // Apply rotation to a random subset of cards after reset
+    applyRandomRotation();
+    setSelectedCards([]); // Reset selected cards
   };
 
   return (
     <div className="flex flex-col justify-center items-center min-h-screen bg-gray-100">
       <h1 className='text-3xl font-bold'>Select The Cards</h1>
+
+      {/* Shuffle and Reset buttons */}
+      <div className="flex space-x-4 my-4">
+        <button
+          onClick={handleShuffle}
+          className="px-4 py-2 bg-blue-500 text-white rounded"
+        >
+          Shuffle & Reset Cards
+        </button>
+        <button
+          onClick={handleReset}
+          className="px-4 py-2 bg-gray-500 text-white rounded"
+        >
+          Reset All Cards
+        </button>
+      </div>
+
       <div className="grid grid-cols-20 gap-4 overflow-y-auto">
         {cards.map((card, index) => (
           <div
             key={index}
-            className={`relative w-16 h-28 cursor-pointer perspective-1000`}
+            className={`relative w-16 h-28 cursor-pointer perspective-1000 ${card.rotateClass}`} // Apply rotation class
             onClick={() => handleCardClick(index)}
           >
             <div
@@ -61,8 +126,9 @@ const App = () => {
               <div
                 className={`absolute w-full h-full backface-hidden ${card.isFlipped ? 'hidden' : ''}`}
               >
-                <div className="flex items-center justify-center h-full bg-gray-300 text-white">
+                <div className="flex items-center justify-center h-full text-white">
                   {/* Optional: Add content for the front of the card */}
+                  <img className='object-cover' src="/images/card.jpg" alt="" />
                 </div>
               </div>
               <div
@@ -99,7 +165,7 @@ const App = () => {
               onClick={handleModalClose}
               className="mt-4 px-4 py-2 bg-red-500 text-white rounded"
             >
-              Close & Shuffle Cards
+              Close Modal
             </button>
           </div>
         </div>
