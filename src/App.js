@@ -56,8 +56,8 @@ const App = () => {
           clearTimeout(modalTimeout); // Clear existing timeout before setting a new one
         }
         const timeout = setTimeout(() => {
-          setIsModalOpen(true); // Open modal after 4 seconds
-        }, 2000); // 4 seconds delay
+          setIsModalOpen(true); // Open modal after 2 seconds
+        }, 2000); // 2 seconds delay
         setModalTimeout(timeout); // Save the timeout reference
       }
 
@@ -127,7 +127,6 @@ const App = () => {
                 className={`absolute w-full h-full backface-hidden ${card.isFlipped ? 'hidden' : ''}`}
               >
                 <div className="flex items-center justify-center h-full text-white">
-                  {/* Optional: Add content for the front of the card */}
                   <img className='object-cover' src="/images/card.jpg" alt="" />
                 </div>
               </div>
@@ -152,11 +151,29 @@ const App = () => {
             <div className="grid grid-cols-3 gap-4">
               {selectedCards.map((card, index) => (
                 <div key={index} className="flex flex-col items-center">
-                  <img
-                    src={card.img}
-                    alt={card.name}
-                    className="w-[17rem] h-[30rem] object-cover"
-                  />
+                  <div className={`relative w-[17rem] h-[28rem] perspective-1000 ${card.rotateClass}`}>
+                    <div
+                      className={`absolute w-[17rem] h-[28rem] transition-transform duration-500 transform-style-preserve-3d
+                        ${card.isFlipped ? 'rotate-y-180' : ''}`}
+                      style={{ transformOrigin: '50% 50%' }}
+                    >
+                      <div
+                        className={`absolute w-full h-full backface-hidden ${card.isFlipped ? 'hidden' : ''}`}
+                      >
+                        <div className="flex items-center justify-center h-full text-white">
+                          <img className='object-cover' src="/images/card.jpg" alt="" />
+                        </div>
+                      </div>
+                      <div
+                        className={`absolute w-full h-full backface-hidden ${card.isFlipped ? '' : 'hidden'} rotate-y-180`}
+                      >
+                        <img
+                          src={card.img}
+                          className="w-[17rem] h-[28rem] object-cover"
+                        />
+                      </div>
+                    </div>
+                  </div>
                   <p className="mt-2 font-bold">{card.name}</p>
                 </div>
               ))}
